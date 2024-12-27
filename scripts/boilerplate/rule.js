@@ -13,11 +13,14 @@ import { generateObjSchema } from '../util/schemas';
 
 const errorMessage = '';
 
-const schema = generateObjSchema();
+const schema = generateObjSchema(); // TODO: remove this and use "schema: []" if no options.
 
-module.exports = {
+export default {
   meta: {
-    docs: {},
+    docs: {
+      get description() { throw new SyntaxError('do not forget to add the description!'); },
+      get url() { throw new SyntaxError('do not forget to add the URL!'); },
+    },
     schema: [schema],
   },
 

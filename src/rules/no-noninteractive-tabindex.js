@@ -11,12 +11,12 @@
 import { dom } from 'aria-query';
 import type { JSXOpeningElement } from 'ast-types-flow';
 import {
-  elementType,
   getProp,
   getLiteralPropValue,
 } from 'jsx-ast-utils';
 import includes from 'array-includes';
 import type { ESLintConfig, ESLintContext, ESLintVisitorSelectorConfig } from '../../flow/eslint';
+import getElementType from '../util/getElementType';
 import isInteractiveElement from '../util/isInteractiveElement';
 import isInteractiveRole from '../util/isInteractiveRole';
 import isNonLiteralProperty from '../util/isNonLiteralProperty';
@@ -40,12 +40,14 @@ export default ({
   meta: {
     docs: {
       url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/tree/HEAD/docs/rules/no-noninteractive-tabindex.md',
+      description: '`tabIndex` should only be declared on interactive elements.',
     },
     schema: [schema],
   },
 
   create: (context: ESLintContext): ESLintVisitorSelectorConfig => {
     const { options } = context;
+    const elementType = getElementType(context);
     return {
       JSXOpeningElement: (node: JSXOpeningElement) => {
         const type = elementType(node);
@@ -79,6 +81,18 @@ export default ({
           allowExpressionValues === true
           && isNonLiteralProperty(attributes, 'role')
         ) {
+          // Special case if role is assigned using ternary with literals on both side
+          const roleProp = getProp(attributes, 'role');
+          if (roleProp && roleProp.type === 'JSXAttribute' && roleProp.value.type === 'JSXExpressionContainer') {
+            if (roleProp.value.expression.type === 'ConditionalExpression') {
+              if (
+                roleProp.value.expression.consequent.type === 'Literal'
+                && roleProp.value.expression.alternate.type === 'Literal'
+              ) {
+                return;
+              }
+            }
+          }
           return;
         }
         if (

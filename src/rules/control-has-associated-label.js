@@ -9,11 +9,12 @@
 // Rule Definition
 // ----------------------------------------------------------------------------
 
-import { elementType, getProp, getLiteralPropValue } from 'jsx-ast-utils';
+import { getProp, getLiteralPropValue } from 'jsx-ast-utils';
 import type { JSXElement } from 'ast-types-flow';
 import includes from 'array-includes';
 import { generateObjSchema, arraySchema } from '../util/schemas';
 import type { ESLintConfig, ESLintContext, ESLintVisitorSelectorConfig } from '../../flow/eslint';
+import getElementType from '../util/getElementType';
 import isDOMElement from '../util/isDOMElement';
 import isHiddenFromScreenReader from '../util/isHiddenFromScreenReader';
 import isInteractiveElement from '../util/isInteractiveElement';
@@ -38,11 +39,15 @@ const schema = generateObjSchema({
 
 export default ({
   meta: {
-    docs: {},
+    docs: {
+      description: 'Enforce that a control (an interactive element) has a text label.',
+      url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/control-has-associated-label.md',
+    },
     schema: [schema],
   },
 
   create: (context: ESLintContext): ESLintVisitorSelectorConfig => {
+    const elementType = getElementType(context);
     const options = context.options[0] || {};
     const {
       labelAttributes = [],
@@ -51,7 +56,7 @@ export default ({
       ignoreRoles = [],
     } = options;
 
-    const newIgnoreElements = new Set([...ignoreElements, ...ignoreList]);
+    const newIgnoreElements = new Set([].concat(ignoreElements, ignoreList));
 
     const rule = (node: JSXElement): void => {
       const tag = elementType(node.openingElement);
@@ -96,6 +101,8 @@ export default ({
           node,
           recursionDepth,
           labelAttributes,
+          elementType,
+          controlComponents,
         );
       }
 

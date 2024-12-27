@@ -12,7 +12,7 @@ import { propName } from 'jsx-ast-utils';
 import { generateObjSchema } from '../util/schemas';
 import getSuggestion from '../util/getSuggestion';
 
-const ariaAttributes = [...aria.keys()];
+const ariaAttributes = aria.keys();
 
 const errorMessage = (name) => {
   const suggestions = getSuggestion(name, ariaAttributes);
@@ -31,6 +31,7 @@ export default {
   meta: {
     docs: {
       url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/tree/HEAD/docs/rules/aria-props.md',
+      description: 'Enforce all `aria-*` props are valid.',
     },
     schema: [schema],
   },
@@ -44,7 +45,7 @@ export default {
         return;
       }
 
-      const isValid = ariaAttributes.indexOf(name) > -1;
+      const isValid = aria.has(name);
 
       if (isValid === false) {
         context.report({

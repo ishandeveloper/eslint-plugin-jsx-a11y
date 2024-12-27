@@ -9,11 +9,11 @@
 // Rule Definition
 // ----------------------------------------------------------------------------
 
-import { elementType } from 'jsx-ast-utils';
 import includes from 'array-includes';
-import has from 'has';
+import hasOwn from 'hasown';
 import type { JSXOpeningElement } from 'ast-types-flow';
 import type { ESLintConfig, ESLintContext, ESLintVisitorSelectorConfig } from '../../flow/eslint';
+import getElementType from '../util/getElementType';
 import getExplicitRole from '../util/getExplicitRole';
 import getImplicitRole from '../util/getImplicitRole';
 
@@ -27,6 +27,7 @@ export default ({
   meta: {
     docs: {
       url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/tree/HEAD/docs/rules/no-redundant-roles.md',
+      description: 'Enforce explicit role property is not the same as implicit/default role property on element.',
     },
     schema: [{
       type: 'object',
@@ -42,6 +43,7 @@ export default ({
 
   create: (context: ESLintContext): ESLintVisitorSelectorConfig => {
     const { options } = context;
+    const elementType = getElementType(context);
     return {
       JSXOpeningElement: (node: JSXOpeningElement) => {
         const type = elementType(node);
@@ -56,7 +58,7 @@ export default ({
           const allowedRedundantRoles = (options[0] || {});
           let redundantRolesForElement;
 
-          if (has(allowedRedundantRoles, type)) {
+          if (hasOwn(allowedRedundantRoles, type)) {
             redundantRolesForElement = allowedRedundantRoles[type];
           } else {
             redundantRolesForElement = DEFAULT_ROLE_EXCEPTIONS[type] || [];

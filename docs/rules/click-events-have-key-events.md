@@ -1,6 +1,10 @@
-# click-events-have-key-events
+# jsx-a11y/click-events-have-key-events
 
-Enforce `onClick` is accompanied by at least one of the following: `onKeyUp`, `onKeyDown`, `onKeyPress`. Coding for the keyboard is important for users with physical disabilities who cannot use a mouse, AT compatibility, and screenreader users. This does not apply for interactive or hidden elements.
+💼 This rule is enabled in the following configs: ☑️ `recommended`, 🔒 `strict`.
+
+<!-- end auto-generated rule header -->
+
+Enforce `onClick` is accompanied by at least one of the following: `onKeyUp`, `onKeyDown`, `onKeyPress`. Coding for the keyboard is important for users with physical disabilities who cannot use a mouse, AT compatibility, and screen reader users. This does not apply for interactive or hidden elements.
 
 ## Rule details
 
@@ -12,7 +16,7 @@ This rule takes no arguments.
 <div onClick={() => {}} onKeyUp={this.handleKeyUp} />
 <div onClick={() => {}} onKeyPress={this.handleKeyPress} />
 <button onClick={() => {}} />
-<div onClick{() => {}} aria-hidden="true" />
+<div onClick={() => {}} aria-hidden="true" />
 ```
 
 ### Fail

@@ -11,28 +11,27 @@
 
 import { dom } from 'aria-query';
 import {
-  elementType,
   getProp,
   getLiteralPropValue,
   propName,
 } from 'jsx-ast-utils';
 import type { JSXIdentifier } from 'ast-types-flow';
 import includes from 'array-includes';
-import has from 'has';
+import hasOwn from 'hasown';
 import type { ESLintConfig, ESLintContext, ESLintVisitorSelectorConfig } from '../../flow/eslint';
 import type { ESLintJSXAttribute } from '../../flow/eslint-jsx';
+import getElementType from '../util/getElementType';
 import isInteractiveElement from '../util/isInteractiveElement';
 import isNonInteractiveRole from '../util/isNonInteractiveRole';
 import isPresentationRole from '../util/isPresentationRole';
 
 const errorMessage = 'Interactive elements should not be assigned non-interactive roles.';
 
-const domElements = [...dom.keys()];
-
 export default ({
   meta: {
     docs: {
       url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/tree/HEAD/docs/rules/no-interactive-element-to-noninteractive-role.md',
+      description: 'Interactive elements should not be assigned non-interactive roles.',
     },
     schema: [{
       type: 'object',
@@ -48,6 +47,7 @@ export default ({
 
   create: (context: ESLintContext): ESLintVisitorSelectorConfig => {
     const { options } = context;
+    const elementType = getElementType(context);
     return {
       JSXAttribute: (attribute: ESLintJSXAttribute) => {
         const attributeName: JSXIdentifier = propName(attribute);
@@ -60,7 +60,7 @@ export default ({
         const type = elementType(node);
         const role = getLiteralPropValue(getProp(node.attributes, 'role'));
 
-        if (!includes(domElements, type)) {
+        if (!dom.has(type)) {
           // Do not test higher level JSX components, as we do not know what
           // low-level DOM element this maps to.
           return;
@@ -68,7 +68,7 @@ export default ({
         // Allow overrides from rule configuration for specific elements and
         // roles.
         const allowedRoles = (options[0] || {});
-        if (has(allowedRoles, type) && includes(allowedRoles[type], role)) {
+        if (hasOwn(allowedRoles, type) && includes(allowedRoles[type], role)) {
           return;
         }
         if (

@@ -9,6 +9,7 @@
 
 import { RuleTester } from 'eslint';
 import parserOptionsMapper from '../../__util__/parserOptionsMapper';
+import parsers from '../../__util__/helpers/parsers';
 import rule from '../../../src/rules/scope';
 
 // -----------------------------------------------------------------------------
@@ -22,8 +23,17 @@ const expectedError = {
   type: 'JSXAttribute',
 };
 
+const componentsSettings = {
+  'jsx-a11y': {
+    components: {
+      Foo: 'div',
+      TableHeader: 'th',
+    },
+  },
+};
+
 ruleTester.run('scope', rule, {
-  valid: [
+  valid: parsers.all([].concat(
     { code: '<div />;' },
     { code: '<div foo />;' },
     { code: '<th scope />' },
@@ -31,8 +41,10 @@ ruleTester.run('scope', rule, {
     { code: '<th scope={foo} />' },
     { code: '<th scope={"col"} {...props} />' },
     { code: '<Foo scope="bar" {...props} />' },
-  ].map(parserOptionsMapper),
-  invalid: [
+    { code: '<TableHeader scope="row" />', settings: componentsSettings },
+  )).map(parserOptionsMapper),
+  invalid: parsers.all([].concat(
     { code: '<div scope />', errors: [expectedError] },
-  ].map(parserOptionsMapper),
+    { code: '<Foo scope="bar" />', settings: componentsSettings, errors: [expectedError] },
+  )).map(parserOptionsMapper),
 });

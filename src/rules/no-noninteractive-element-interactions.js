@@ -9,7 +9,6 @@
 
 import { dom } from 'aria-query';
 import {
-  elementType,
   eventHandlersByType,
   getPropValue,
   getProp,
@@ -18,10 +17,12 @@ import {
 } from 'jsx-ast-utils';
 import type { JSXOpeningElement } from 'ast-types-flow';
 import includes from 'array-includes';
-import has from 'has';
+import hasOwn from 'hasown';
 import type { ESLintConfig, ESLintContext, ESLintVisitorSelectorConfig } from '../../flow/eslint';
 import { arraySchema, generateObjSchema } from '../util/schemas';
+import getElementType from '../util/getElementType';
 import isAbstractRole from '../util/isAbstractRole';
+import isContentEditable from '../util/isContentEditable';
 import isHiddenFromScreenReader from '../util/isHiddenFromScreenReader';
 import isInteractiveElement from '../util/isInteractiveElement';
 import isInteractiveRole from '../util/isInteractiveRole';
@@ -31,13 +32,12 @@ import isPresentationRole from '../util/isPresentationRole';
 
 const errorMessage = 'Non-interactive elements should not be assigned mouse or keyboard event listeners.';
 
-const domElements = [...dom.keys()];
-const defaultInteractiveProps = [
-  ...eventHandlersByType.focus,
-  ...eventHandlersByType.image,
-  ...eventHandlersByType.keyboard,
-  ...eventHandlersByType.mouse,
-];
+const defaultInteractiveProps = [].concat(
+  eventHandlersByType.focus,
+  eventHandlersByType.image,
+  eventHandlersByType.keyboard,
+  eventHandlersByType.mouse,
+);
 const schema = generateObjSchema({
   handlers: arraySchema,
 });
@@ -46,12 +46,14 @@ export default ({
   meta: {
     docs: {
       url: 'https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/tree/HEAD/docs/rules/no-noninteractive-element-interactions.md',
+      description: 'Non-interactive elements should not be assigned mouse or keyboard event listeners.',
     },
     schema: [schema],
   },
 
   create: (context: ESLintContext): ESLintVisitorSelectorConfig => {
     const { options } = context;
+    const elementType = getElementType(context);
     return {
       JSXOpeningElement: (node: JSXOpeningElement) => {
         let { attributes } = node;
@@ -59,7 +61,7 @@ export default ({
         const config = (options[0] || {});
         const interactiveProps = config.handlers || defaultInteractiveProps;
         // Allow overrides from rule configuration for specific elements and roles.
-        if (has(config, type)) {
+        if (hasOwn(config, type)) {
           attributes = attributes.filter((attr) => attr.type !== 'JSXSpreadAttribute' && !includes(config[type], propName(attr)));
         }
 
@@ -69,13 +71,14 @@ export default ({
             && getPropValue(getProp(attributes, prop)) != null
           ));
 
-        if (!includes(domElements, type)) {
+        if (!dom.has(type)) {
           // Do not test higher level JSX components, as we do not know what
           // low-level DOM element this maps to.
           return;
         }
         if (
           !hasInteractiveProps
+          || isContentEditable(type, attributes)
           || isHiddenFromScreenReader(type, attributes)
           || isPresentationRole(type, attributes)
         ) {

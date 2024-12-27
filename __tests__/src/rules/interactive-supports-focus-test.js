@@ -15,6 +15,7 @@ import {
 } from 'jsx-ast-utils';
 import { configs } from '../../../src/index';
 import parserOptionsMapper from '../../__util__/parserOptionsMapper';
+import parsers from '../../__util__/helpers/parsers';
 import rule from '../../../src/rules/interactive-supports-focus';
 import ruleOptionsMapperFactory from '../../__util__/ruleOptionsMapperFactory';
 
@@ -34,9 +35,27 @@ function template(strings, ...keys) {
 const ruleName = 'interactive-supports-focus';
 const type = 'JSXOpeningElement';
 const codeTemplate = template`<${0} role="${1}" ${2}={() => void 0} />`;
+const fixedTemplate = template`<${0} tabIndex={${1}} role="${2}" ${3}={() => void 0} />`;
 const tabindexTemplate = template`<${0} role="${1}" ${2}={() => void 0} tabIndex="0" />`;
 const tabbableTemplate = template`Elements with the '${0}' interactive role must be tabbable.`;
 const focusableTemplate = template`Elements with the '${0}' interactive role must be focusable.`;
+
+const componentsSettings = {
+  'jsx-a11y': {
+    components: {
+      Div: 'div',
+    },
+  },
+};
+
+const buttonError = {
+  message: tabbableTemplate('button'),
+  suggestions: [{
+    desc: 'Add `tabIndex={0}` to make the element focusable in sequential keyboard navigation.',
+    output: '<Div tabIndex={0} onClick={() => void 0} role="button" />',
+  }],
+  type,
+};
 
 const recommendedOptions = configs.recommended.rules[`jsx-a11y/${ruleName}`][1] || {};
 
@@ -116,6 +135,11 @@ const alwaysValid = [
   { code: '<div role="textbox" aria-disabled="true" onClick={() => void 0} />' },
   { code: '<Foo.Bar onClick={() => void 0} aria-hidden={false} />;' },
   { code: '<Input onClick={() => void 0} type="hidden" />;' },
+  { code: '<Div onClick={() => void 0} role="button" tabIndex="0" />', settings: componentsSettings },
+];
+
+const neverValid = [
+  { code: '<Div onClick={() => void 0} role="button" />', errors: [buttonError], settings: componentsSettings },
 ];
 
 const interactiveRoles = [
@@ -186,6 +210,13 @@ const failReducer = (roles, handlers, messageTemplate) => (
         errors: [{
           type,
           message: messageTemplate(role),
+          suggestions: [{
+            desc: 'Add `tabIndex={0}` to make the element focusable in sequential keyboard navigation.',
+            output: fixedTemplate(element, '0', role, handler),
+          }].concat(messageTemplate === focusableTemplate ? [{
+            desc: 'Add `tabIndex={-1}` to make the element focusable but not reachable via sequential keyboard navigation.',
+            output: fixedTemplate(element, '-1', role, handler),
+          }] : []),
         }],
       })))
     ), []))
@@ -193,7 +224,7 @@ const failReducer = (roles, handlers, messageTemplate) => (
 );
 
 ruleTester.run(`${ruleName}:recommended`, rule, {
-  valid: [
+  valid: parsers.all([].concat(
     ...alwaysValid,
     ...passReducer(
       interactiveRoles,
@@ -205,23 +236,24 @@ ruleTester.run(`${ruleName}:recommended`, rule, {
       eventHandlers.filter((handler) => includes(triggeringHandlers, handler)),
       tabindexTemplate,
     ),
-  ]
+  ))
     .map(ruleOptionsMapperFactory(recommendedOptions))
     .map(parserOptionsMapper),
-  invalid: [
+  invalid: parsers.all([].concat(
+    ...neverValid,
     ...failReducer(recommendedRoles, triggeringHandlers, tabbableTemplate),
     ...failReducer(
       interactiveRoles.filter((role) => !includes(recommendedRoles, role)),
       triggeringHandlers,
       focusableTemplate,
     ),
-  ]
+  ))
     .map(ruleOptionsMapperFactory(recommendedOptions))
     .map(parserOptionsMapper),
 });
 
 ruleTester.run(`${ruleName}:strict`, rule, {
-  valid: [
+  valid: parsers.all([].concat(
     ...alwaysValid,
     ...passReducer(
       interactiveRoles,
@@ -233,17 +265,18 @@ ruleTester.run(`${ruleName}:strict`, rule, {
       eventHandlers.filter((handler) => includes(triggeringHandlers, handler)),
       tabindexTemplate,
     ),
-  ]
+  ))
     .map(ruleOptionsMapperFactory(strictOptions))
     .map(parserOptionsMapper),
-  invalid: [
+  invalid: parsers.all([].concat(
+    ...neverValid,
     ...failReducer(strictRoles, triggeringHandlers, tabbableTemplate),
     ...failReducer(
       interactiveRoles.filter((role) => !includes(strictRoles, role)),
       triggeringHandlers,
       focusableTemplate,
     ),
-  ]
+  ))
     .map(ruleOptionsMapperFactory(strictOptions))
     .map(parserOptionsMapper),
 });

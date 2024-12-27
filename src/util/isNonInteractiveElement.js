@@ -13,9 +13,11 @@ import {
 } from 'axobject-query';
 import type { Node } from 'ast-types-flow';
 import includes from 'array-includes';
+import flatMap from 'array.prototype.flatmap';
+
 import attributesComparator from './attributesComparator';
 
-const roleKeys = [...roles.keys()];
+const roleKeys = roles.keys();
 const elementRoleEntries = [...elementRoles];
 
 const nonInteractiveRoles = new Set(roleKeys
@@ -56,75 +58,45 @@ const interactiveRoles = new Set(roleKeys
     'toolbar',
   ));
 
-const nonInteractiveElementRoleSchemas = elementRoleEntries
-  .reduce((
-    accumulator,
-    [
-      elementSchema,
-      roleSet,
-    ],
-  ) => {
-    if ([...roleSet].every((role): boolean => nonInteractiveRoles.has(role))) {
-      accumulator.push(elementSchema);
-    }
-    return accumulator;
-  }, []);
+const interactiveElementRoleSchemas = flatMap(
+  elementRoleEntries,
+  ([elementSchema, rolesArr]) => (rolesArr.some((role): boolean => interactiveRoles.has(role)) ? [elementSchema] : []),
+);
 
-const interactiveElementRoleSchemas = elementRoleEntries
-  .reduce((
-    accumulator,
-    [
-      elementSchema,
-      roleSet,
-    ],
-  ) => {
-    if ([...roleSet].some((role): boolean => interactiveRoles.has(role))) {
-      accumulator.push(elementSchema);
-    }
-    return accumulator;
-  }, []);
+const nonInteractiveElementRoleSchemas = flatMap(
+  elementRoleEntries,
+  ([elementSchema, rolesArr]) => (rolesArr.every((role): boolean => nonInteractiveRoles.has(role)) ? [elementSchema] : []),
+);
 
-const nonInteractiveAXObjects = new Set([...AXObjects.keys()]
-  .filter((name) => includes(['window', 'structure'], AXObjects.get(name).type)));
+const nonInteractiveAXObjects = new Set(AXObjects.keys().filter((name) => includes(['window', 'structure'], AXObjects.get(name).type)));
 
-const nonInteractiveElementAXObjectSchemas = [...elementAXObjects]
-  .reduce((
-    accumulator,
-    [
-      elementSchema,
-      AXObjectSet,
-    ],
-  ) => {
-    if ([...AXObjectSet].every((role): boolean => nonInteractiveAXObjects.has(role))) {
-      accumulator.push(elementSchema);
-    }
-    return accumulator;
-  }, []);
+const nonInteractiveElementAXObjectSchemas = flatMap(
+  [...elementAXObjects],
+  ([elementSchema, AXObjectsArr]) => (AXObjectsArr.every((role): boolean => nonInteractiveAXObjects.has(role)) ? [elementSchema] : []),
+);
 
 function checkIsNonInteractiveElement(tagName, attributes): boolean {
   function elementSchemaMatcher(elementSchema) {
     return (
       tagName === elementSchema.name
+      && tagName !== 'td' // TODO: investigate why this is needed
       && attributesComparator(elementSchema.attributes, attributes)
     );
   }
   // Check in elementRoles for inherent non-interactive role associations for
   // this element.
-  const isInherentNonInteractiveElement = nonInteractiveElementRoleSchemas
-    .some(elementSchemaMatcher);
+  const isInherentNonInteractiveElement = nonInteractiveElementRoleSchemas.some(elementSchemaMatcher);
   if (isInherentNonInteractiveElement) {
     return true;
   }
   // Check in elementRoles for inherent interactive role associations for
   // this element.
-  const isInherentInteractiveElement = interactiveElementRoleSchemas
-    .some(elementSchemaMatcher);
+  const isInherentInteractiveElement = interactiveElementRoleSchemas.some(elementSchemaMatcher);
   if (isInherentInteractiveElement) {
     return false;
   }
   // Check in elementAXObjects for AX Tree associations for this element.
-  const isNonInteractiveAXElement = nonInteractiveElementAXObjectSchemas
-    .some(elementSchemaMatcher);
+  const isNonInteractiveAXElement = nonInteractiveElementAXObjectSchemas.some(elementSchemaMatcher);
   if (isNonInteractiveAXElement) {
     return true;
   }
